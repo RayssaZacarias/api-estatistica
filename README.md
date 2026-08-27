@@ -32,8 +32,7 @@ API REST desenvolvida em **FastAPI** utilizando **Python 3.12** para cálculos e
 ### 1. Clonar o Repositório
 
 ```bash
-git clone <URL_DO_SEU_REPOSITORIO>
-cd Api-estatistica
+git clone <URL_DO_REPOSITORIO>
 
 ```
 
