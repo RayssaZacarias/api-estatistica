@@ -1,5 +1,6 @@
 import pandas as pd
-import validacao
+from app.services import validacao
+from app.utils import conversao
 
 df = pd.read_parquet(
     "data/processed/acidentes_tratado.parquet"
@@ -54,8 +55,8 @@ def maximo(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
     for coluna in colunas:
 
         validacao.validar_coluna(df,coluna)
-
-        resultados[coluna] = df[coluna].max()
+        
+        resultados[coluna] = conversao.converter_valor(df[coluna].max())
 
     return resultados
 
@@ -68,7 +69,7 @@ def minimo(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
 
         validacao.validar_coluna(df,coluna)
 
-        resultados[coluna] = df[coluna].min()
+        resultados[coluna] = conversao.converter_valor(df[coluna].min())
 
     return resultados
 
@@ -82,12 +83,12 @@ def quartis(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
 
         validacao.validar_coluna(df,coluna)
 
-        valores_quartis = df[coluna].quantile([0.25, 0.50, 0.75])
+        valores = df[coluna].quantile([0.25, 0.50, 0.75])
 
         resultados[coluna] = {
-            "Q1": valores_quartis.loc[0.25],
-            "Q2": valores_quartis.loc[0.50],
-            "Q3": valores_quartis.loc[0.75]
+            "Q1": conversao.converter_valor(valores.loc[0.25]),
+            "Q2": conversao.converter_valor(valores.loc[0.50]),
+            "Q3": conversao.converter_valor(valores.loc[0.75])
         }
 
     return resultados

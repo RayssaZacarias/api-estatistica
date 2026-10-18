@@ -1,5 +1,6 @@
 import pandas as pd
-import validacao
+from app.services import validacao
+from app.utils import conversao
 
 df = pd.read_parquet(
     "data/processed/acidentes_tratado.parquet"
@@ -52,10 +53,8 @@ def media(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
     for coluna in colunas:
 
         validacao.validar_coluna(df,coluna)
-
-        resultados[coluna] = (
-            df[coluna].mean()
-        )
+        
+        resultados[coluna] = conversao.converter_valor(df[coluna].mean())
 
     return resultados
 
@@ -68,11 +67,7 @@ def moda(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
 
         validacao.validar_coluna(df,coluna)
 
-        resultados[coluna] = (
-            df[coluna]
-            .mode()
-            .tolist()
-        )
+        resultados[coluna] = conversao.converter_valor(df[coluna].mode().tolist())
 
     return resultados
 
@@ -85,7 +80,7 @@ def mediana(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
 
         validacao.validar_coluna(df,coluna)
 
-        resultados[coluna] = (df[coluna].median())
+        resultados[coluna] = conversao.converter_valor(df[coluna].median())
 
     return resultados
 

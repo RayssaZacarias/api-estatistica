@@ -1,6 +1,6 @@
 import pandas as pd
-import validacao
-
+from app.services import validacao
+from app.utils import conversao
 df = pd.read_parquet(
     "data/processed/acidentes_tratado.parquet"
 )
@@ -55,7 +55,7 @@ def variancia(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
 
         validacao.validar_coluna(df,coluna)
 
-        resultados[coluna] = (df[coluna].var(ddof=0))
+        resultados[coluna] = conversao.converter_valor(df[coluna].var(ddof=0))
 
     return resultados
 
@@ -68,9 +68,7 @@ def desvio_padrao(df: pd.DataFrame,colunas: list[str],filtros: dict | None = Non
 
         validacao.validar_coluna(df,coluna)
 
-        resultados[coluna] = (
-            df[coluna].std(ddof=0)
-        )
+        resultados[coluna] = conversao.converter_valor(df[coluna].std(ddof=0))
 
     return resultados
 
