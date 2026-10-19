@@ -1,0 +1,94 @@
+import pandas as pd
+from app.services import validacao
+from app.utils import conversao
+
+df = pd.read_parquet(
+    "data/processed/acidentes_tratado.parquet"
+)
+
+filtros = {
+    "id": None,
+    "pesid": None,
+    "data_inversa": None,
+    "dia_semana": None,
+    "horario": None,
+    "uf": None,
+    "br": None,
+    "km": None,
+    "municipio": None,
+    "causa_principal": None,
+    "causa_acidente": None,
+    "ordem_tipo_acidente": None,
+    "tipo_acidente": None,
+    "classificacao_acidente": None,
+    "fase_dia": None,
+    "sentido_via": None,
+    "condicao_metereologica": None,
+    "tipo_pista": None,
+    "tracado_via": None,
+    "uso_solo": None,
+    "id_veiculo": None,
+    "tipo_veiculo": None,
+    "marca": None,
+    "ano_fabricacao_veiculo": None,
+    "tipo_envolvido": None,
+    "estado_fisico": None,
+    "idade": None,
+    "sexo": None,
+    "ilesos": None,
+    "feridos_leves": None,
+    "feridos_graves": None,
+    "mortos": None,
+    "latitude": None,
+    "longitude": None,
+    "regional": None,
+    "delegacia": None,
+    "uop": None,
+    "ano_arquivo": None
+}
+
+
+def maximo(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
+    df = validacao.aplicar_filtro(df,filtros)
+
+    resultados = {}
+    for coluna in colunas:
+
+        validacao.validar_coluna(df,coluna)
+        
+        resultados[coluna] = conversao.converter_valor(df[coluna].max())
+
+    return resultados
+
+
+def minimo(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
+    df = validacao.aplicar_filtro(df,filtros)
+
+    resultados = {}
+    for coluna in colunas:
+
+        validacao.validar_coluna(df,coluna)
+
+        resultados[coluna] = conversao.converter_valor(df[coluna].min())
+
+    return resultados
+
+
+def quartis(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
+    df = validacao.aplicar_filtro(df,filtros)
+
+    resultados = {}
+
+    for coluna in colunas:
+
+        validacao.validar_coluna(df,coluna)
+
+        valores = df[coluna].quantile([0.25, 0.50, 0.75])
+
+        resultados[coluna] = {
+            "Q1": conversao.converter_valor(valores.loc[0.25]),
+            "Q2": conversao.converter_valor(valores.loc[0.50]),
+            "Q3": conversao.converter_valor(valores.loc[0.75])
+        }
+
+    return resultados
