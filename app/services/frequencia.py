@@ -1,92 +1,34 @@
 import pandas as pd
-from app.services import validacao
-from app.services.loader import carregar_parquet
 
-df = carregar_parquet()
-
-filtros = {
-    "id": None,
-    "pesid": None,
-    "data_inversa": None,
-    "dia_semana": None,
-    "horario": None,
-    "uf": None,
-    "br": None,
-    "km": None,
-    "municipio": None,
-    "causa_principal": None,
-    "causa_acidente": None,
-    "ordem_tipo_acidente": None,
-    "tipo_acidente": None,
-    "classificacao_acidente": None,
-    "fase_dia": None,
-    "sentido_via": None,
-    "condicao_metereologica": None,
-    "tipo_pista": None,
-    "tracado_via": None,
-    "uso_solo": None,
-    "id_veiculo": None,
-    "tipo_veiculo": None,
-    "marca": None,
-    "ano_fabricacao_veiculo": None,
-    "tipo_envolvido": None,
-    "estado_fisico": None,
-    "idade": None,
-    "sexo": None,
-    "ilesos": None,
-    "feridos_leves": None,
-    "feridos_graves": None,
-    "mortos": None,
-    "latitude": None,
-    "longitude": None,
-    "regional": None,
-    "delegacia": None,
-    "uop": None,
-    "ano_arquivo": None
-}
+from app.services import validacao, unidades
 
 
-def frequencia_absoluta(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
+
+
+def frequencia_absoluta(
+    df: pd.DataFrame,
+    colunas: list[str],
+    filtros: dict | None = None,
+    unidade: str | None = None
+):
+
+    df = validacao.aplicar_filtro(df, filtros)
+
+    resultados = {}
+
+    for coluna in colunas:
+
+
+        base = unidades.selecionar_base(
+            df, coluna, unidade
+        )
+
+        validacao.validar_coluna(base, coluna)
+
     
-    df = validacao.aplicar_filtro(df,filtros)
-
-    resultados = {}
-
-    for coluna in colunas:
-
-        validacao.validar_coluna(df,coluna)
-
-        frequencias = (df[coluna].value_counts())
-
-        resultados[coluna] = {
-            "frequencias": {
-                str(categoria): int(valor)
-                for categoria, valor in frequencias.items()
-            },
-
-            "total_valido": int(
-                frequencias.sum()
-            )
-        }
-
-    return resultados
-
-
-def frequencia_relativa(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
-
-    df = validacao.aplicar_filtro(df,filtros)
-
-    resultados = {}
-
-    for coluna in colunas:
-
-        validacao.validar_coluna(df,coluna)
-
         frequencias = (
-            df[coluna]
-            .value_counts(normalize=True)
-            .mul(100)
-            .round(2)
+            base[coluna]
+            .value_counts()
         )
 
         resultados[coluna] = {
@@ -96,25 +38,80 @@ def frequencia_relativa(df: pd.DataFrame,colunas: list[str],filtros: dict | None
             },
 
             "total_valido": int(
-                frequencias.sum()
+                base[coluna].notna().sum()
             )
         }
 
     return resultados
 
 
-def frequencia_absoluta_acumulada(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
-    
-    df = validacao.aplicar_filtro(df,filtros)
+
+def frequencia_relativa(
+    df: pd.DataFrame,
+    colunas: list[str],
+    filtros: dict | None = None,
+    unidade: str | None = None
+):
+
+    df = validacao.aplicar_filtro(df, filtros)
 
     resultados = {}
 
     for coluna in colunas:
 
-        validacao.validar_coluna(df,coluna)
+  
+        base = unidades.selecionar_base(
+            df, coluna, unidade
+        )
+
+        validacao.validar_coluna(base, coluna)
+
 
         frequencias = (
-            df[coluna]
+            base[coluna]
+            .value_counts(normalize=True)
+            .mul(100)
+            .round(2)
+        )
+
+        resultados[coluna] = {
+            "frequencias": {
+                str(categoria): float(valor)
+                for categoria, valor in frequencias.items()
+            },
+
+            "total_valido": int(
+                base[coluna].notna().sum()
+            )
+        }
+
+    return resultados
+
+
+
+
+def frequencia_absoluta_acumulada(
+    df: pd.DataFrame,
+    colunas: list[str],
+    filtros: dict | None = None,
+    unidade: str | None = None
+):
+
+    df = validacao.aplicar_filtro(df, filtros)
+
+    resultados = {}
+
+    for coluna in colunas:
+
+
+        base = unidades.selecionar_base(
+            df, coluna, unidade
+        )
+
+        validacao.validar_coluna(base, coluna)
+
+        frequencias = (
+            base[coluna]
             .value_counts()
             .sort_index()
             .cumsum()
@@ -127,26 +124,36 @@ def frequencia_absoluta_acumulada(df: pd.DataFrame,colunas: list[str],filtros: d
             },
 
             "total_valido": int(
-                frequencias.sum()
+                base[coluna].notna().sum()
             )
         }
 
     return resultados
 
 
-def frequencia_relativa_acumulada(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
-    
-    
-    df = validacao.aplicar_filtro(df,filtros)
+
+def frequencia_relativa_acumulada(
+    df: pd.DataFrame,
+    colunas: list[str],
+    filtros: dict | None = None,
+    unidade: str | None = None
+):
+
+    df = validacao.aplicar_filtro(df, filtros)
 
     resultados = {}
 
     for coluna in colunas:
 
-        validacao.validar_coluna(df,coluna)
+        base = unidades.selecionar_base(
+            df, coluna, unidade
+        )
 
+        validacao.validar_coluna(base, coluna)
+
+  
         frequencias = (
-            df[coluna]
+            base[coluna]
             .value_counts(normalize=True)
             .sort_index()
             .cumsum()
@@ -156,12 +163,12 @@ def frequencia_relativa_acumulada(df: pd.DataFrame,colunas: list[str],filtros: d
 
         resultados[coluna] = {
             "frequencias": {
-                str(categoria): int(valor)
+                str(categoria): float(valor)
                 for categoria, valor in frequencias.items()
             },
 
             "total_valido": int(
-                frequencias.sum()
+                base[coluna].notna().sum()
             )
         }
 

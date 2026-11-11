@@ -1,94 +1,181 @@
 import pandas as pd
-from app.services import validacao
+from app.services import validacao, unidades
 from app.utils import conversao
 
-df = pd.read_parquet(
-    "data/processed/acidentes_tratado.parquet"
-)
+def maximo(
+    df: pd.DataFrame,
+    colunas: list[str],
+    filtros: dict | None = None,
+    unidade: str | None = None
+):
 
-filtros = {
-    "id": None,
-    "pesid": None,
-    "data_inversa": None,
-    "dia_semana": None,
-    "horario": None,
-    "uf": None,
-    "br": None,
-    "km": None,
-    "municipio": None,
-    "causa_principal": None,
-    "causa_acidente": None,
-    "ordem_tipo_acidente": None,
-    "tipo_acidente": None,
-    "classificacao_acidente": None,
-    "fase_dia": None,
-    "sentido_via": None,
-    "condicao_metereologica": None,
-    "tipo_pista": None,
-    "tracado_via": None,
-    "uso_solo": None,
-    "id_veiculo": None,
-    "tipo_veiculo": None,
-    "marca": None,
-    "ano_fabricacao_veiculo": None,
-    "tipo_envolvido": None,
-    "estado_fisico": None,
-    "idade": None,
-    "sexo": None,
-    "ilesos": None,
-    "feridos_leves": None,
-    "feridos_graves": None,
-    "mortos": None,
-    "latitude": None,
-    "longitude": None,
-    "regional": None,
-    "delegacia": None,
-    "uop": None,
-    "ano_arquivo": None
-}
-
-
-def maximo(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
-    df = validacao.aplicar_filtro(df,filtros)
+    df = validacao.aplicar_filtro(
+        df,
+        filtros
+    )
 
     resultados = {}
+
     for coluna in colunas:
 
-        validacao.validar_coluna(df,coluna)
-        
-        resultados[coluna] = conversao.converter_valor(df[coluna].max())
+        # Seleciona a unidade de análise
+        base = unidades.selecionar_base(
+            df,
+            coluna,
+            unidade
+        )
+
+        # Valida a coluna
+        validacao.validar_coluna(
+            base,
+            coluna
+        )
+
+        # Verifica se a variável é numérica
+        if not pd.api.types.is_numeric_dtype(
+            base[coluna]
+        ):
+            raise ValueError(
+                f"A coluna '{coluna}' não é numérica "
+                "e não permite calcular máximo numérico."
+            )
+
+        # Calcula usando a unidade correta
+        valor = base[coluna].max()
+
+        resultados[coluna] = (
+            conversao.converter_valor(valor)
+            if pd.notna(valor)
+            else None
+        )
+
+    return resultados
+
+def minimo(
+    df: pd.DataFrame,
+    colunas: list[str],
+    filtros: dict | None = None,
+    unidade: str | None = None
+):
+
+    df = validacao.aplicar_filtro(
+        df,
+        filtros
+    )
+
+    resultados = {}
+
+    for coluna in colunas:
+
+        # Seleciona a unidade de análise
+        base = unidades.selecionar_base(
+            df,
+            coluna,
+            unidade
+        )
+
+        # Valida a coluna
+        validacao.validar_coluna(
+            base,
+            coluna
+        )
+
+        # Verifica se a variável é numérica
+        if not pd.api.types.is_numeric_dtype(
+            base[coluna]
+        ):
+            raise ValueError(
+                f"A coluna '{coluna}' não é numérica "
+                "e não permite calcular mínimo numérico."
+            )
+
+        # Calcula usando a unidade correta
+        valor = base[coluna].min()
+
+        resultados[coluna] = (
+            conversao.converter_valor(valor)
+            if pd.notna(valor)
+            else None
+        )
 
     return resultados
 
 
-def minimo(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
-    df = validacao.aplicar_filtro(df,filtros)
+# =========================================================
+# QUARTIS
+# =========================================================
+
+def quartis(
+    df: pd.DataFrame,
+    colunas: list[str],
+    filtros: dict | None = None,
+    unidade: str | None = None
+):
+
+    df = validacao.aplicar_filtro(
+        df,
+        filtros
+    )
 
     resultados = {}
-    for coluna in colunas:
-
-        validacao.validar_coluna(df,coluna)
-
-        resultados[coluna] = conversao.converter_valor(df[coluna].min())
-
-    return resultados
-
-
-def quartis(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
-    df = validacao.aplicar_filtro(df,filtros)
-
-    resultados = {}
 
     for coluna in colunas:
 
-        validacao.validar_coluna(df,coluna)
+        # Seleciona a unidade de análise
+        base = unidades.selecionar_base(
+            df,
+            coluna,
+            unidade
+        )
 
-        valores = df[coluna].quantile([0.25, 0.50, 0.75])
+        # Valida a coluna
+        validacao.validar_coluna(
+            base,
+            coluna
+        )
+
+        # Verifica se a variável é numérica
+        if not pd.api.types.is_numeric_dtype(
+            base[coluna]
+        ):
+            raise ValueError(
+                f"A coluna '{coluna}' não é numérica "
+                "e não permite calcular quartis."
+            )
+
+        # Seleciona os valores válidos
+        serie = base[coluna].dropna()
+
+        # Caso não existam valores válidos
+        if serie.empty:
+
+            resultados[coluna] = {
+                "Q1": None,
+                "Q2": None,
+                "Q3": None
+            }
+
+            continue
+
+        # Calcula os quartis
+        valores = serie.quantile([
+            0.25,
+            0.50,
+            0.75
+        ])
 
         resultados[coluna] = {
-            "Q1": conversao.converter_valor(valores.loc[0.25]),
-            "Q2": conversao.converter_valor(valores.loc[0.50]),
-            "Q3": conversao.converter_valor(valores.loc[0.75])
+            "Q1": conversao.converter_valor(
+                valores.loc[0.25]
+            ),
+
+            "Q2": conversao.converter_valor(
+                valores.loc[0.50]
+            ),
+
+            "Q3": conversao.converter_valor(
+                valores.loc[0.75]
+            )
         }
 
     return resultados
