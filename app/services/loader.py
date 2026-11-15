@@ -26,12 +26,17 @@ OUT_FILE = (
 
 PLACEHOLDERS = {
     "",
-    "(null)",
+    "na",
+    "nan",
     "null",
+    "(null)",
+    "none",
     "não informado",
     "nao informado",
     "ignorado",
     "(vazio)",
+    "na/na",
+    "na/na/na",
 }
 
 
@@ -79,7 +84,8 @@ def ler_csv_bruto(path: Path) -> pd.DataFrame:
         sep=";",
         encoding="latin-1",
         dtype=str,
-        low_memory=False
+        low_memory=False,
+        keep_default_na=False
     )
 
 
@@ -591,6 +597,80 @@ def pessoas(
         )
     )
 
+
+def resumo_pessoas_por_acidente(
+    df: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    Gera uma linha por acidente, contabilizando
+    os estados físicos de todas as pessoas
+    identificadas nesse acidente.
+    """
+
+    # Guarda todos os acidentes
+    df_acidentes = acidentes(df)[
+        ["ano_arquivo", "id"]
+    ].copy()
+
+    # Seleciona pessoas únicas identificadas
+    df_pessoas = pessoas(df).copy()
+
+    # Mantém os estados físicos ausentes identificados
+    df_pessoas["estado_fisico"] = (
+        df_pessoas["estado_fisico"]
+        .fillna("Não informado")
+    )
+
+    # Conta pessoas em cada situação
+    df_pessoas["ilesos"] = (
+        df_pessoas["estado_fisico"] == "Ileso"
+    ).astype(int)
+
+    df_pessoas["feridos_leves"] = (
+        df_pessoas["estado_fisico"] == "Lesões Leves"
+    ).astype(int)
+
+    df_pessoas["feridos_graves"] = (
+        df_pessoas["estado_fisico"] == "Lesões Graves"
+    ).astype(int)
+
+    df_pessoas["mortos"] = (
+        df_pessoas["estado_fisico"] == "Óbito"
+    ).astype(int)
+
+    df_pessoas["nao_classificados"] = (
+        ~df_pessoas["estado_fisico"].isin([
+            "Ileso",
+            "Lesões Leves",
+            "Lesões Graves",
+            "Óbito"
+        ])
+    ).astype(int)
+
+    # Agrupa as pessoas pertencentes ao mesmo acidente
+    resumo = (
+        df_pessoas
+        .groupby(["ano_arquivo", "id"])
+        .agg(
+            ilesos=("ilesos", "sum"),
+            feridos_leves=("feridos_leves", "sum"),
+            feridos_graves=("feridos_graves", "sum"),
+            mortos=("mortos", "sum"),
+            nao_classificados=("nao_classificados", "sum"),
+            total_pessoas=("pesid", "size")
+        )
+        .reset_index()
+    )
+
+    # Junta o resumo com todos os acidentes
+    resultado = df_acidentes.merge(
+        resumo,
+        on=["ano_arquivo", "id"],
+        how="left",
+        validate="one_to_one"
+    )
+
+    return resultado
 
 def veiculos(
     df: pd.DataFrame

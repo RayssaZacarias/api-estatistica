@@ -1,75 +1,120 @@
 import pandas as pd
-from app.services import validacao
+from app.services import validacao, unidades
 from app.utils import conversao
-df = pd.read_parquet(
-    "data/processed/acidentes_tratado.parquet"
-)
 
-filtros = {
-    "id": None,
-    "pesid": None,
-    "data_inversa": None,
-    "dia_semana": None,
-    "horario": None,
-    "uf": None,
-    "br": None,
-    "km": None,
-    "municipio": None,
-    "causa_principal": None,
-    "causa_acidente": None,
-    "ordem_tipo_acidente": None,
-    "tipo_acidente": None,
-    "classificacao_acidente": None,
-    "fase_dia": None,
-    "sentido_via": None,
-    "condicao_metereologica": None,
-    "tipo_pista": None,
-    "tracado_via": None,
-    "uso_solo": None,
-    "id_veiculo": None,
-    "tipo_veiculo": None,
-    "marca": None,
-    "ano_fabricacao_veiculo": None,
-    "tipo_envolvido": None,
-    "estado_fisico": None,
-    "idade": None,
-    "sexo": None,
-    "ilesos": None,
-    "feridos_leves": None,
-    "feridos_graves": None,
-    "mortos": None,
-    "latitude": None,
-    "longitude": None,
-    "regional": None,
-    "delegacia": None,
-    "uop": None,
-    "ano_arquivo": None
-}
 
-def variancia(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
-    df = validacao.aplicar_filtro(df,filtros)
+def variancia(
+    df: pd.DataFrame,
+    colunas: list[str],
+    filtros: dict | None = None,
+    unidade: str | None = None
+):
+
+    df = validacao.aplicar_filtro(
+        df,
+        filtros
+    )
 
     resultados = {}
 
     for coluna in colunas:
 
-        validacao.validar_coluna(df,coluna)
+        # Seleciona a unidade de análise
+        base = unidades.selecionar_base(
+            df,
+            coluna,
+            unidade
+        )
 
-        resultados[coluna] = conversao.converter_valor(df[coluna].var(ddof=0))
+        # Valida a existência da coluna
+        validacao.validar_coluna(
+            base,
+            coluna
+        )
+
+        # Verifica se a variável é numérica
+        if not pd.api.types.is_numeric_dtype(
+            base[coluna]
+        ):
+            raise ValueError(
+                f"A coluna '{coluna}' não é numérica "
+                "e não permite calcular variância."
+            )
+
+        # Remove ausentes apenas do cálculo
+        serie = base[coluna].dropna()
+
+        if serie.empty:
+
+            resultados[coluna] = None
+
+            continue
+
+        # Variância populacional
+        valor = serie.var(ddof=0)
+
+        resultados[coluna] = (
+            conversao.converter_valor(valor)
+            if pd.notna(valor)
+            else None
+        )
 
     return resultados
 
+def desvio_padrao(
+    df: pd.DataFrame,
+    colunas: list[str],
+    filtros: dict | None = None,
+    unidade: str | None = None
+):
 
-def desvio_padrao(df: pd.DataFrame,colunas: list[str],filtros: dict | None = None):
-    df = validacao.aplicar_filtro(df,filtros)
+    df = validacao.aplicar_filtro(
+        df,
+        filtros
+    )
 
     resultados = {}
+
     for coluna in colunas:
 
-        validacao.validar_coluna(df,coluna)
+        # Seleciona a unidade de análise
+        base = unidades.selecionar_base(
+            df,
+            coluna,
+            unidade
+        )
 
-        resultados[coluna] = conversao.converter_valor(df[coluna].std(ddof=0))
+        # Valida a existência da coluna
+        validacao.validar_coluna(
+            base,
+            coluna
+        )
+
+        # Verifica se a variável é numérica
+        if not pd.api.types.is_numeric_dtype(
+            base[coluna]
+        ):
+            raise ValueError(
+                f"A coluna '{coluna}' não é numérica "
+                "e não permite calcular desvio padrão."
+            )
+
+        # Remove ausentes apenas do cálculo
+        serie = base[coluna].dropna()
+
+        if serie.empty:
+
+            resultados[coluna] = None
+
+            continue
+
+        # Desvio padrão populacional
+        valor = serie.std(ddof=0)
+
+        resultados[coluna] = (
+            conversao.converter_valor(valor)
+            if pd.notna(valor)
+            else None
+        )
 
     return resultados
-
-
